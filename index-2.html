@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Maze Solver — BFS & DFS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0f14; --surface: #151820; --border: #252a35;
+      --text: #c9cdd8; --muted: #555e72;
+      --bfs: #38bdf8; --dfs: #f472b6;
+      --wall: #1e2330; --open: #0d0f14;
+      --start: #4ade80; --end: #fb923c;
+      --mono: 'Space Mono', monospace; --sans: 'Inter', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    header { width: 100%; padding: 28px 40px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; }
+    header h1 { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
+    header span { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+    .layout { width: 100%; max-width: 1100px; padding: 32px 24px; display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; }
+    .panel { display: flex; flex-direction: column; gap: 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .card-title { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; margin-top: 12px; }
+    label:first-of-type { margin-top: 0; }
+    input[type=number], select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: var(--mono); font-size: 0.82rem; padding: 8px 10px; outline: none; transition: border-color .15s; }
+    input[type=number]:focus, select:focus { border-color: var(--bfs); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { flex: 1; padding: 9px 14px; border: none; border-radius: 5px; font-family: var(--mono); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; transition: opacity .15s, transform .1s; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-primary { background: var(--bfs); color: #000; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-cpp { background: #7c3aed; color: #fff; }
+    .tool-btn { padding: 6px 12px; border-radius: 4px; font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); color: var(--text); cursor: pointer; font-family: var(--mono); transition: border-color .15s, color .15s; flex: 1; }
+    .tool-btn.active { border-color: var(--bfs); color: var(--bfs); }
+    .stats { display: flex; flex-direction: column; gap: 10px; }
+    .stat-row { display: flex; align-items: center; gap: 10px; }
+    .stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .stat-label { font-size: 0.78rem; color: var(--muted); flex: 1; }
+    .stat-value { font-family: var(--mono); font-size: 0.82rem; color: #fff; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--muted); }
+    .legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+    .maze-wrap { display: flex; flex-direction: column; gap: 16px; }
+    #maze-container { display: inline-block; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: crosshair; user-select: none; line-height: 0; }
+    .maze-row { display: flex; }
+    .cell { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 0.6rem; font-weight: 700; transition: background .08s; cursor: pointer; }
+    .cell.wall   { background: var(--wall); }
+    .cell.open   { background: var(--open); }
+    .cell.start  { background: var(--start); color: #000; }
+    .cell.end    { background: var(--end); color: #000; }
+    .cell.bfs    { background: rgba(56,189,248,0.25); }
+    .cell.dfs    { background: rgba(244,114,182,0.25); }
+    .cell.both   { background: rgba(139,92,246,0.35); }
+    .cell.bfs-head { background: var(--bfs); }
+    .cell.dfs-head { background: var(--dfs); }
+    .status-bar { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); padding: 6px 0; }
+    .status-bar .ok   { color: var(--start); }
+    .status-bar .err  { color: #ff4545; }
+    .status-bar .info { color: var(--bfs); }
+
+    /* C++ stdin modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 28px; width: 560px; max-width: 95vw; }
+    .modal h2 { font-family: var(--mono); font-size: 0.85rem; color: #fff; margin-bottom: 6px; }
+    .modal p { font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+    .modal pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: var(--mono); font-size: 0.7rem; color: var(--bfs); overflow-x: auto; white-space: pre; margin-bottom: 14px; max-height: 280px; overflow-y: auto; }
+    .modal .cmd { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: var(--mono); font-size: 0.72rem; color: #fff; margin-bottom: 14px; }
+    .modal .cmd span { color: var(--dfs); }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+    .copy-flash { color: var(--start) !important; }
+
+    @media (max-width: 720px) {
+      .layout { grid-template-columns: 1fr; }
+      .cell { width: 20px; height: 20px; font-size: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>MAZE SOLVER</h1>
+  <span>BFS &amp; DFS visualizer</span>
+</header>
+
+<div class="layout">
+  <!-- LEFT PANEL -->
+  <div class="panel">
+
+    <div class="card">
+      <div class="card-title">Grid Setup</div>
+      <label>Rows</label>
+      <input type="number" id="rows" value="15" min="5" max="35"/>
+      <label>Cols</label>
+      <input type="number" id="cols" value="25" min="5" max="55"/>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn-secondary" onclick="generateEmpty()">Empty</button>
+        <button class="btn-secondary" onclick="generateRandom()">Random</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Draw Tool</div>
+      <div class="btn-row">
+        <button class="tool-btn active" id="tool-wall"  onclick="setTool('wall')">Wall</button>
+        <button class="tool-btn"        id="tool-open"  onclick="setTool('open')">Open</button>
+        <button class="tool-btn"        id="tool-start" onclick="setTool('start')">Start</button>
+        <button class="tool-btn"        id="tool-end"   onclick="setTool('end')">End</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Solve</div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="solve()">Run BFS + DFS</button>
+        <button class="btn-secondary" onclick="clearPaths()">Clear</button>
+      </div>
+      <label style="margin-top:12px">Animation speed</label>
+      <select id="speed">
+        <option value="60">Fast</option>
+        <option value="120" selected>Normal</option>
+        <option value="250">Slow</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="card-title">C++ Integration</div>
+      <p style="font-size:0.74rem;color:var(--muted);margin-bottom:12px;line-height:1.6">
+        Export your drawn maze as stdin input for the C++ solver. Copy the input and run the command below in your terminal.
+      </p>
+      <div class="btn-row">
+        <button class="btn-cpp" onclick="showCppModal()">⬡ Export to C++</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Results</div>
+      <div class="stats">
+        <div class="stat-row">
+          <div class="stat-dot" style="background:var(--bfs)"></div>
+          <div class="stat-label">BFS steps</div>
+          <div class="stat-value" id="bfs-steps">—</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-dot" style="background:var(--dfs)"></div>
+          <div class="stat-label">DFS steps</div>
+          <div class="stat-value" id="dfs-steps">—</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-dot" style="background:var(--muted)"></div>
+          <div class="stat-label">BFS visited</div>
+          <div class="stat-value" id="bfs-visited">—</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-dot" style="background:var(--muted)"></div>
+          <div class="stat-label">DFS visited</div>
+          <div class="stat-value" id="dfs-visited">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Legend</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--start)"></div>Start (S)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--end)"></div>End (E)</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--wall)"></div>Wall</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(56,189,248,0.3)"></div>BFS path</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(244,114,182,0.3)"></div>DFS path</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:rgba(139,92,246,0.4)"></div>Both</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: MAZE -->
+  <div class="maze-wrap">
+    <div style="font-family:var(--mono);font-size:0.72rem;color:var(--muted)">Click or drag to draw</div>
+    <div id="maze-container"></div>
+    <div class="status-bar" id="status">Ready — generate or draw a maze, then click Run.</div>
+  </div>
+</div>
+
+<!-- C++ stdin modal -->
+<div class="modal-overlay" id="cpp-modal">
+  <div class="modal">
+    <h2>Export Maze → C++ stdin</h2>
+    <p>
+      The C++ solver now reads from <strong style="color:#fff">stdin</strong> instead of a file.<br>
+      Copy the input below, then paste it into your terminal after running the compiled binary.
+    </p>
+    <div class="cmd">
+      $ g++ -std=c++17 -o maze_solver maze_solver.cpp<br>
+      $ <span>./maze_solver</span> &lt;&lt;&lt; "$(pbpaste)"&nbsp;&nbsp;<span style="color:var(--muted)"># macOS</span><br>
+      $ <span>./maze_solver</span> &lt; input.txt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># save file first</span>
+    </div>
+    <p>Stdin input (rows cols, then maze rows):</p>
+    <pre id="cpp-output"></pre>
+    <div class="modal-footer">
+      <button class="btn-secondary" style="flex:none;padding:8px 16px" onclick="closeCppModal()">Close</button>
+      <button class="btn-cpp" style="flex:none;padding:8px 16px" id="copy-btn" onclick="copyStdin()">Copy Input</button>
+      <button class="btn-secondary" style="flex:none;padding:8px 16px" onclick="downloadInput()">Save as input.txt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let grid = [], rows = 15, cols = 25;
+  let startPos = null, endPos = null;
+  let activeTool = 'wall', painting = false, animRunning = false;
+  const DR = [-1, 1, 0, 0], DC = [0, 0, -1, 1];
+
+  function init() {
+    rows = parseInt(document.getElementById('rows').value);
+    cols = parseInt(document.getElementById('cols').value);
+  }
+
+  function generateEmpty() {
+    init();
+    grid = Array.from({length: rows}, (_, r) =>
+      Array.from({length: cols}, (_, c) =>
+        (r===0||r===rows-1||c===0||c===cols-1) ? 'wall' : 'open'
+      )
+    );
+    startPos = null; endPos = null; clearResults(); renderGrid();
+    setStatus('Empty grid ready. Place Start and End, then draw walls.', 'info');
+  }
+
+  function generateRandom() {
+    init();
+    grid = Array.from({length: rows}, (_, r) =>
+      Array.from({length: cols}, (_, c) =>
+        (r===0||r===rows-1||c===0||c===cols-1) ? 'wall' : (Math.random() < 0.28 ? 'wall' : 'open')
+      )
+    );
+    placeFixed(1, 1, 'start');
+    placeFixed(rows-2, cols-2, 'end');
+    clearResults(); renderGrid();
+    setStatus('Random maze generated. Click Run to solve.', 'info');
+  }
+
+  function placeFixed(r, c, type) {
+    if (type === 'start') { if (startPos) grid[startPos[0]][startPos[1]] = 'open'; startPos = [r, c]; }
+    else                  { if (endPos)   grid[endPos[0]][endPos[1]]   = 'open'; endPos   = [r, c]; }
+    grid[r][c] = type;
+  }
+
+  function renderGrid(overlay = {}) {
+    const container = document.getElementById('maze-container');
+    container.innerHTML = '';
+    for (let r = 0; r < rows; r++) {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'maze-row';
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        const base = grid[r][c];
+        cell.className = 'cell ' + base;
+        const key = r + ',' + c;
+        if (overlay[key] && base === 'open') cell.classList.add(overlay[key]);
+        if (base === 'start') cell.textContent = 'S';
+        if (base === 'end')   cell.textContent = 'E';
+        cell.addEventListener('mousedown', e => { painting = true; paint(r, c); e.preventDefault(); });
+        cell.addEventListener('mouseover', () => { if (painting) paint(r, c); });
+        rowEl.appendChild(cell);
+      }
+      container.appendChild(rowEl);
+    }
+  }
+
+  document.addEventListener('mouseup', () => painting = false);
+
+  function setTool(t) {
+    activeTool = t;
+    ['wall','open','start','end'].forEach(id =>
+      document.getElementById('tool-' + id).classList.toggle('active', id === t)
+    );
+  }
+
+  function paint(r, c) {
+    if (animRunning) return;
+    if (activeTool === 'start') {
+      if (startPos) grid[startPos[0]][startPos[1]] = 'open';
+      startPos = [r, c];
+    } else if (activeTool === 'end') {
+      if (endPos) grid[endPos[0]][endPos[1]] = 'open';
+      endPos = [r, c];
+    }
+    grid[r][c] = activeTool;
+    renderGrid();
+  }
+
+  // ── Build stdin string from current grid ──────────────────────────────────
+  function buildStdin() {
+    const charMap = { wall: '#', open: ' ', start: 'S', end: 'E' };
+    const mazeLines = grid.map(row => row.map(c => charMap[c]).join(''));
+    return `${rows} ${cols}\n` + mazeLines.join('\n');
+  }
+
+  // ── C++ modal ─────────────────────────────────────────────────────────────
+  function showCppModal() {
+    if (!startPos || !endPos)
+      return setStatus('Place S (Start) and E (End) before exporting.', 'err');
+    document.getElementById('cpp-output').textContent = buildStdin();
+    document.getElementById('cpp-modal').classList.add('open');
+  }
+
+  function closeCppModal() {
+    document.getElementById('cpp-modal').classList.remove('open');
+  }
+
+  function copyStdin() {
+    const text = document.getElementById('cpp-output').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copy-flash');
+      setTimeout(() => { btn.textContent = 'Copy Input'; btn.classList.remove('copy-flash'); }, 1800);
+    });
+  }
+
+  function downloadInput() {
+    const text = buildStdin();
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'input.txt';
+    a.click();
+  }
+
+  // ── Algorithms ────────────────────────────────────────────────────────────
+  function bfs() {
+    if (!startPos || !endPos) return null;
+    const visited = new Set(), parent = {}, queue = [[...startPos]], order = [];
+    visited.add(startPos.join(','));
+    while (queue.length) {
+      const [r, c] = queue.shift();
+      order.push([r, c]);
+      if (r === endPos[0] && c === endPos[1]) return { path: reconstruct(parent, endPos), visited: order };
+      for (let d = 0; d < 4; d++) {
+        const nr = r + DR[d], nc = c + DC[d], nk = nr+','+nc;
+        if (nr>=0&&nr<rows&&nc>=0&&nc<cols&&!visited.has(nk)&&grid[nr][nc]!=='wall') {
+          visited.add(nk); parent[nk]=[r,c]; queue.push([nr,nc]);
+        }
+      }
+    }
+    return { path: null, visited: order };
+  }
+
+  function dfs() {
+    if (!startPos || !endPos) return null;
+    const visited = new Set(), parent = {}, stack = [[...startPos]], order = [];
+    while (stack.length) {
+      const [r, c] = stack.pop();
+      const key = r+','+c;
+      if (visited.has(key)) continue;
+      visited.add(key); order.push([r, c]);
+      if (r === endPos[0] && c === endPos[1]) return { path: reconstruct(parent, endPos), visited: order };
+      for (let d = 0; d < 4; d++) {
+        const nr = r + DR[d], nc = c + DC[d], nk = nr+','+nc;
+        if (nr>=0&&nr<rows&&nc>=0&&nc<cols&&!visited.has(nk)&&grid[nr][nc]!=='wall') {
+          parent[nk]=[r,c]; stack.push([nr,nc]);
+        }
+      }
+    }
+    return { path: null, visited: order };
+  }
+
+  function reconstruct(parent, endP) {
+    const path = []; let cur = endP.join(',');
+    while (cur) {
+      const [r, c] = cur.split(',').map(Number);
+      path.unshift([r, c]);
+      const p = parent[cur]; cur = p ? p.join(',') : null;
+    }
+    return path;
+  }
+
+  async function solve() {
+    if (animRunning) return;
+    if (!startPos || !endPos) return setStatus('Place a Start (S) and End (E) first.', 'err');
+    animRunning = true; clearResults();
+    setStatus('Running BFS…', 'info');
+    const speed = parseInt(document.getElementById('speed').value);
+    const bfsResult = bfs(), dfsResult = dfs();
+    const overlay = {};
+
+    for (let i = 0; i < bfsResult.visited.length; i++) {
+      const [r, c] = bfsResult.visited[i];
+      if (grid[r][c] === 'open') overlay[r+','+c] = 'bfs';
+      if (i % 3 === 0) { renderGrid(overlay); await sleep(speed / 3); }
+    }
+    setStatus('Running DFS…', 'info');
+    for (let i = 0; i < dfsResult.visited.length; i++) {
+      const [r, c] = dfsResult.visited[i];
+      const key = r+','+c;
+      if (grid[r][c] === 'open') overlay[key] = overlay[key] === 'bfs' ? 'both' : 'dfs';
+      if (i % 3 === 0) { renderGrid(overlay); await sleep(speed / 3); }
+    }
+    if (bfsResult.path) bfsResult.path.forEach(([r,c]) => { if (grid[r][c]==='open') overlay[r+','+c]='bfs-head'; });
+    if (dfsResult.path) dfsResult.path.forEach(([r,c]) => {
+      const key = r+','+c;
+      if (grid[r][c]==='open') overlay[key] = overlay[key]==='bfs-head' ? 'both' : 'dfs-head';
+    });
+    renderGrid(overlay);
+    document.getElementById('bfs-steps').textContent   = bfsResult.path ? bfsResult.path.length-1 : 'No path';
+    document.getElementById('dfs-steps').textContent   = dfsResult.path ? dfsResult.path.length-1 : 'No path';
+    document.getElementById('bfs-visited').textContent = bfsResult.visited.length;
+    document.getElementById('dfs-visited').textContent = dfsResult.visited.length;
+    const msg = (!bfsResult.path && !dfsResult.path)
+      ? 'No path found — the maze may be unsolvable.'
+      : `Done! BFS: ${bfsResult.path?.length-1??'✗'} steps · DFS: ${dfsResult.path?.length-1??'✗'} steps`;
+    setStatus(msg, bfsResult.path ? 'ok' : 'err');
+    animRunning = false;
+  }
+
+  function clearPaths() { if (!animRunning) { clearResults(); renderGrid(); setStatus('Paths cleared.', 'info'); } }
+  function clearResults() { ['bfs-steps','dfs-steps','bfs-visited','dfs-visited'].forEach(id => document.getElementById(id).textContent='—'); }
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function setStatus(msg, cls='') {
+    const el = document.getElementById('status');
+    el.className = 'status-bar' + (cls ? ' '+cls : '');
+    el.textContent = msg;
+  }
+
+  // Click outside modal closes it
+  document.getElementById('cpp-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeCppModal();
+  });
+
+  generateRandom();
+</script>
+</body>
+</html>
