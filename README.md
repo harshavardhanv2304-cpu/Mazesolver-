@@ -2,7 +2,18 @@
 
 A high-performance maze-solving application featuring a core C++ backend algorithm engine and an interactive, browser-based frontend visualizer. The project allows you to model, analyze, and animate pathfinding algorithms side by side.
 
-The C++ implementation (`maze_solver.cpp`) provides a robust, optimized reference architecture for reading mazes from files and calculating paths, while the Vanilla JavaScript frontend mirrors this logic to run entirely in the browser with zero external dependencies or build configurations required.
+The C++ implementation (`maze_solver.cpp`) provides a robust, optimized reference architecture for reading mazes from text files and calculating paths, while the Vanilla JavaScript frontend mirrors this logic to run entirely in the browser with zero external dependencies or build configurations required.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Backend Engine** | C++17 | Core file I/O streaming, grid parsing, and console path rendering |
+| **Frontend UI** | Vanilla JS | Client-side grid sandbox, interactive state updates, and step-by-step canvas animations |
+| **Markup** | HTML5 | Component layout, custom status bar structures, and responsive control panels |
+| **Styling** | CSS3 | Dark-themed user interface utilizing modern CSS variables and flexbox |
 
 ---
 
@@ -18,6 +29,10 @@ maze-solver/
 ├── docs/
 │   └── maze-format.md    # Maze file format specification
 └── README.md
+
+
+
+---
 
 ```
 ## Features
