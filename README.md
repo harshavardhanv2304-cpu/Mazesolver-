@@ -19,3 +19,9 @@ maze-solver/
 │   └── maze-format.md    # Maze file format specification
 └── README.md
 # Mazesolver-
+Features
+Interactive Grid Sandbox: Click and drag directly on the canvas to draw walls, clear open paths, or dynamically reposition the Start (S) and End (E) nodes.
+Dual-Engine Animation: Watch Breadth-First Search (BFS) and Depth-First Search (DFS) race step-by-step across the grid with real-time cell state tracking.
+Instant Maze Generators: Generate randomized maze configurations instantly with a built-in algorithmic generator.
+File Stream Integration: Seamlessly import existing text-based maze files into the visualizer UI or export custom grid creations back into standard text layout strings.
+Visual Metric Breakdown: A live analytics panel displaying step counts (path length) and total visited cells for both algorithms to clearly illustrate search efficiency.
